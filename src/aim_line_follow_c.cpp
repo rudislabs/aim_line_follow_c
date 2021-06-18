@@ -1,16 +1,15 @@
-// Copyright 2016 Open Source Robotics Foundation, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* AIM Line Follow Example Code - C++
+ *
+ * This example code is meant to act as an example for simple line-following control
+ * in NXP Cup Summer Camp and NXP AIM Challenge.
+ *
+ * The code is heavily commented to help students and professors understand the code.
+ *
+ * Questions? Email landon.haugh@nxp.com
+ *
+ * Written by: Landon Haugh (landon.haugh@nxp.com)
+ *             Aditya Vashista (aditya.vashista@nxp.com)
+ */
 
 #include <chrono>
 #include <memory>
@@ -28,14 +27,12 @@
 
 using namespace std::chrono_literals;
 
-/* This example creates a subclass of Node and uses std::bind() to register a
- * member function as a callback from the timer. */
-
 class LineFollower : public rclcpp::Node
 {
+
 public:
-  LineFollower()
-  : Node("aim_line_follow_c"), count_(0)
+
+  LineFollower() : Node("aim_line_follow_c"), count_(0)
   {
     // Delcare and get parameter values
     this->declare_parameter<double>("start_delay", 15.0);
@@ -52,14 +49,22 @@ public:
     // Create publisher and subscribers
     publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/cupcar0/cmd_vel", 10);
     subscription_ = this->create_subscription<nxp_cup_interfaces::msg::PixyVector>(
-                          "/cupcar0/PixyVector", 10, std::bind(&LineFollower::topic_callback,
+                          "/cupcar0/PixyVector", 10, std::bind(&LineFollower::listener_callback,
                           this, std::placeholders::_1));
 
     sleep(start_delay_);
   }
 
+/*
+ * NXP SUMMER CAMP PARTICIPANTS:
+ * There are two included functions within the private section for your convenience.
+ * get_num_vectors() and publish_controls()
+ * If you want to add new functions, just add them in the private section.
+ */
 private:
-  int get_num_vectors(nxp_cup_interfaces::msg::PixyVector::SharedPtr msg) const
+
+  // START DO NOT EDIT
+  int get_num_vectors(nxp_cup_interfaces::msg::PixyVector::SharedPtr msg)
   {
     int num_vectors = 0;
     if(!(msg->m0_x0 == 0 && msg->m0_x1 == 0 && msg->m0_y0 == 0 && msg->m0_y1 == 0))
@@ -73,11 +78,32 @@ private:
     return num_vectors;
   }
 
-  void topic_callback(const nxp_cup_interfaces::msg::PixyVector::SharedPtr msg) const
+  void publish_controls(double speed, double steer)
   {
-    double frame_width = 72;
-    double frame_height = 52;
+    speed_vector_.x = (speed * (1-abs(2*steer)));
+    steer_vector_.z = steer;
 
+    cmd_vel_.linear = speed_vector_;
+    cmd_vel_.angular = steer_vector_;
+
+    publisher_->publish(cmd_vel_);
+
+    return;
+  }
+  // END DO NOT EDIT
+
+  /*
+   * NXP SUMMER CAMP PARTICIPANTS:
+   * - This is the function that you will write your self-driving code in.
+   * - Each time new line vector data is found, this function will run.
+   * - You can use 'msg->m?_??' to use the line vector data.
+   * - Store your calculated speed and steer values in the 'speed' and 'steer' variables.
+   * - Use the publish_controls() function to send these values to the simulated car.
+   */
+  void listener_callback(nxp_cup_interfaces::msg::PixyVector::SharedPtr msg)
+  {
+    double frame_width = 78;
+    double frame_height = 51;
     double window_center = frame_width / 2;
 
     double x = 0;
@@ -85,10 +111,6 @@ private:
 
     double steer = 0;
     double speed = 0;
-
-    geometry_msgs::msg::Vector3 speed_vector;
-    geometry_msgs::msg::Vector3 steer_vector;
-    geometry_msgs::msg::Twist cmd_vel;
 
     int num_vectors = get_num_vectors(msg);
 
@@ -126,13 +148,8 @@ private:
         break;
     }
 
-    speed_vector.x = (speed * (1-abs(2*steer)));
-    steer_vector.z = steer;
-    
-    cmd_vel.linear = speed_vector;
-    cmd_vel.angular = steer_vector;
-
-    publisher_->publish(cmd_vel);
+    // Publish speed/steer controls
+    publish_controls(speed, steer);
   }
 
   // Parameters
@@ -143,11 +160,17 @@ private:
   double single_line_steer_scale_;
   size_t count_;
 
+  // Control values
+  geometry_msgs::msg::Vector3 speed_vector_;
+  geometry_msgs::msg::Vector3 steer_vector_;
+  geometry_msgs::msg::Twist cmd_vel_;
+
   // Pub/sub
   rclcpp::Subscription<nxp_cup_interfaces::msg::PixyVector>::SharedPtr subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
 };
 
+// START DO NOT EDIT
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
@@ -155,3 +178,4 @@ int main(int argc, char * argv[])
   rclcpp::shutdown();
   return 0;
 }
+// END DO NOT EDIT
