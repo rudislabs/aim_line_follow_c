@@ -24,6 +24,8 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "nxp_cup_interfaces/msg/pixy_vector.hpp"
+#include "apriltag_msgs/msg/april_tag_detection_array.hpp"
+#include "apriltag_msgs/msg/april_tag_detection.hpp"
 
 using namespace std::chrono_literals;
 
@@ -48,9 +50,12 @@ public:
 
     // Create publisher and subscribers
     publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/cupcar0/cmd_vel", 10);
-    subscription_ = this->create_subscription<nxp_cup_interfaces::msg::PixyVector>(
+    pixy_subscription_ = this->create_subscription<nxp_cup_interfaces::msg::PixyVector>(
                           "/cupcar0/PixyVector", 10, std::bind(&LineFollower::listener_callback,
                           this, std::placeholders::_1));
+    apriltag_subscription_ = this->create_subscription<apriltag_msgs::msg::AprilTagDetectionArray>(
+                              "/apriltag/detections", 10, std::bind(&LineFollower::apriltag_callback,
+                              this, std::placeholders::_1));
 
     sleep(start_delay_);
   }
@@ -91,6 +96,24 @@ private:
     return;
   }
   // END DO NOT EDIT
+
+  /*
+   * NXP SUMMER CAMP PARTICIPANTS:
+   * This code just shows you how to retrieve the data from the
+   * AprilTag node. You will need to use this data to perform actions
+   * with the car within listener_callback.
+   */
+  void apriltag_callback(apriltag_msgs::msg::AprilTagDetectionArray::SharedPtr msg)
+  {
+    // Check to see if the detections object is empty. If so, then no detections found.
+    if(!msg->detections.empty())
+    {
+      // Store the 1st detection in an AprilTagDetection object
+      apriltag_msgs::msg::AprilTagDetection detection = msg->detections[0];
+      // Print the detection ID to the ROS INFO stream
+      RCLCPP_INFO(this->get_logger(), "Detection found! ID: %d\n", detection.id);
+    }
+  }
 
   /*
    * NXP SUMMER CAMP PARTICIPANTS:
@@ -166,7 +189,8 @@ private:
   geometry_msgs::msg::Twist cmd_vel_;
 
   // Pub/sub
-  rclcpp::Subscription<nxp_cup_interfaces::msg::PixyVector>::SharedPtr subscription_;
+  rclcpp::Subscription<apriltag_msgs::msg::AprilTagDetectionArray>::SharedPtr apriltag_subscription_;
+  rclcpp::Subscription<nxp_cup_interfaces::msg::PixyVector>::SharedPtr pixy_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
 };
 
