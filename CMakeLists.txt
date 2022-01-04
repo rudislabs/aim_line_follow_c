@@ -22,11 +22,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nxp_cup_interfaces REQUIRED)
-find_package(apriltag_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
 add_executable(aim_line_follow_c src/aim_line_follow_c.cpp)
-ament_target_dependencies(aim_line_follow_c rclcpp std_msgs geometry_msgs nxp_cup_interfaces apriltag_msgs)
+ament_target_dependencies(aim_line_follow_c rclcpp std_msgs geometry_msgs nxp_cup_interfaces)
 
 install(TARGETS
   aim_line_follow_c
